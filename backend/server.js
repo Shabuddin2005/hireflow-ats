@@ -13,7 +13,8 @@ const port = 3000;
 
 const allowedOrigins = [
     "http://localhost:5173",
-    "https://hireflow-ats-frontend.onrender.com"
+    "https://hireflow-ats-frontend.onrender.com",
+    "https://hireflow-ats-cydt.onrender.com"
 ];
 
 app.use(cors({
