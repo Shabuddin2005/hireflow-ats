@@ -78,8 +78,12 @@ function RecruiterDashboard({ onLogout }) {
     const search = searchTerm.toLowerCase();
 
     const matchesSearch =
-      (application.candidate_name || "").toLowerCase().includes(search) ||
-      (application.email || "").toLowerCase().includes(search);
+      (application.candidate_name || "")
+        .toLowerCase()
+        .includes(search) ||
+      (application.email || "")
+        .toLowerCase()
+        .includes(search);
 
     const matchesStatus =
       statusFilter === "All" ||
@@ -144,7 +148,10 @@ function RecruiterDashboard({ onLogout }) {
       );
     } catch (error) {
       console.error("Status update error:", error);
-      alert(error.message || "Could not update application status.");
+
+      alert(
+        error.message || "Could not update application status."
+      );
 
       setApplications((previousApplications) =>
         previousApplications.map((item) =>
@@ -193,12 +200,29 @@ function RecruiterDashboard({ onLogout }) {
       );
     } catch (error) {
       console.error("Delete application error:", error);
-      alert(error.message || "Could not delete the application.");
+
+      alert(
+        error.message || "Could not delete the application."
+      );
     }
   }
 
-  // Download a resume through the protected endpoint.
-  async function handleResumeDownload(application) {
+  // View a resume in a new browser tab.
+  async function handleViewResume(application) {
+    // Open the tab immediately to avoid popup blocking.
+    const newTab = window.open("about:blank", "_blank");
+
+    if (!newTab) {
+      alert(
+        "Please allow pop-ups for this website to view resumes."
+      );
+      return;
+    }
+
+    newTab.document.title = "Loading Resume...";
+
+    let fileUrl = null;
+
     try {
       const response = await fetch(
         `${API_URL}/api/applications/${application.id}/resume/download`,
@@ -208,29 +232,50 @@ function RecruiterDashboard({ onLogout }) {
       );
 
       if (response.status === 401) {
+        newTab.close();
         handleUnauthorized();
         return;
       }
 
       if (!response.ok) {
-        throw new Error("Failed to download resume.");
+        throw new Error(
+          "Could not open the resume. Please check whether the PDF exists."
+        );
       }
 
       const blob = await response.blob();
-      const fileUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
 
-      link.href = fileUrl;
-      link.download = application.resume_path || "resume.pdf";
+      // Confirm the response contains a PDF.
+      if (
+        blob.type &&
+        !blob.type.toLowerCase().includes("pdf")
+      ) {
+        throw new Error("The server did not return a PDF file.");
+      }
 
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      fileUrl = URL.createObjectURL(blob);
 
-      URL.revokeObjectURL(fileUrl);
+      // Display the PDF instead of downloading it.
+      newTab.location.href = fileUrl;
+
+      // Release the temporary URL when the tab is closed.
+      const cleanup = () => {
+        URL.revokeObjectURL(fileUrl);
+      };
+
+      newTab.addEventListener("pagehide", cleanup, {
+        once: true,
+      });
     } catch (error) {
-      console.error("Resume download error:", error);
-      alert(error.message || "Could not download the resume.");
+      console.error("View resume error:", error);
+
+      if (fileUrl) {
+        URL.revokeObjectURL(fileUrl);
+      }
+
+      newTab.close();
+
+      alert(error.message || "Could not open the resume.");
     }
   }
 
@@ -239,6 +284,7 @@ function RecruiterDashboard({ onLogout }) {
       <h2>Recruiter Dashboard</h2>
       <p>View all candidate applications.</p>
 
+      {/* Dashboard summary cards */}
       <div className="dashboard-summary">
         <div className="summary-card">
           <h3>Total Applications</h3>
@@ -261,6 +307,7 @@ function RecruiterDashboard({ onLogout }) {
         </div>
       </div>
 
+      {/* Search and status filters */}
       <div className="application-filters">
         <input
           type="text"
@@ -281,7 +328,9 @@ function RecruiterDashboard({ onLogout }) {
         </select>
       </div>
 
-      {applicationsLoading && <p>Loading applications...</p>}
+      {applicationsLoading && (
+        <p>Loading applications...</p>
+      )}
 
       {applicationsError && (
         <p className="error">{applicationsError}</p>
@@ -300,6 +349,7 @@ function RecruiterDashboard({ onLogout }) {
           <p>No applications match your search or filter.</p>
         )}
 
+      {/* Applications table */}
       {!applicationsLoading &&
         !applicationsError &&
         applications.length > 0 && (
@@ -331,10 +381,10 @@ function RecruiterDashboard({ onLogout }) {
                         <button
                           type="button"
                           onClick={() =>
-                            handleResumeDownload(application)
+                            handleViewResume(application)
                           }
                         >
-                          Download Resume
+                          View Resume
                         </button>
                       ) : (
                         "No resume"
@@ -343,7 +393,9 @@ function RecruiterDashboard({ onLogout }) {
 
                     <td>
                       <div
-                        className={`status-cell status-${application.status.toLowerCase()}`}
+                        className={`status-cell status-${(
+                          application.status || ""
+                        ).toLowerCase()}`}
                       >
                         <span className="status-badge">
                           {application.status}
@@ -360,7 +412,9 @@ function RecruiterDashboard({ onLogout }) {
                         >
                           <option value="Applied">Applied</option>
                           <option value="Reviewing">Reviewing</option>
-                          <option value="Shortlisted">Shortlisted</option>
+                          <option value="Shortlisted">
+                            Shortlisted
+                          </option>
                           <option value="Rejected">Rejected</option>
                         </select>
                       </div>
@@ -386,7 +440,9 @@ function RecruiterDashboard({ onLogout }) {
                         <button
                           type="button"
                           className="delete-button"
-                          onClick={() => handleDelete(application)}
+                          onClick={() =>
+                            handleDelete(application)
+                          }
                         >
                           Delete
                         </button>
@@ -399,6 +455,7 @@ function RecruiterDashboard({ onLogout }) {
           </div>
         )}
 
+      {/* Application details modal */}
       {selectedApplication && (
         <div className="application-details-overlay">
           <div className="application-details">
@@ -418,7 +475,8 @@ function RecruiterDashboard({ onLogout }) {
             </p>
 
             <p>
-              <strong>Email:</strong> {selectedApplication.email}
+              <strong>Email:</strong>{" "}
+              {selectedApplication.email}
             </p>
 
             <p>
@@ -427,11 +485,13 @@ function RecruiterDashboard({ onLogout }) {
             </p>
 
             <p>
-              <strong>Company:</strong> {selectedApplication.company}
+              <strong>Company:</strong>{" "}
+              {selectedApplication.company}
             </p>
 
             <p>
-              <strong>Status:</strong> {selectedApplication.status}
+              <strong>Status:</strong>{" "}
+              {selectedApplication.status}
             </p>
 
             <p>
@@ -445,10 +505,10 @@ function RecruiterDashboard({ onLogout }) {
               <button
                 type="button"
                 onClick={() =>
-                  handleResumeDownload(selectedApplication)
+                  handleViewResume(selectedApplication)
                 }
               >
-                Download Resume
+                View Resume
               </button>
             )}
           </div>
