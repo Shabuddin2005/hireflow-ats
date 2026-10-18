@@ -11,10 +11,27 @@ const db = require('./db');
 const app = express();;
 const port = 3000;
 
-const allowedOrigins = ["https://hireflow-ats-cydt.onrender.com"];
+
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://hireflow-ats-cydt.onrender.com"
+];
+
+app.use((req, res, next) => {
+    console.log("Request Origin:", req.headers.origin);
+    next();
+});
 
 app.use(cors({
-    origin: allowedOrigins
+    origin: (origin, callback) => {
+        console.log("CORS checking origin:", origin);
+
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("Origin not allowed: " + origin));
+        }
+    }
 }));
 
 app.use(express.json());
