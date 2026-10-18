@@ -11,7 +11,14 @@ const db = require('./db');
 const app = express();;
 const port = 3000;
 
-app.use(cors({origin : "http://localhost:5173"}));
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://hireflow-ats-frontend.onrender.com"
+];
+
+app.use(cors({
+    origin: allowedOrigins
+}));
 
 app.use(express.json());
 
