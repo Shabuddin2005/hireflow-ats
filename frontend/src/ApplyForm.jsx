@@ -23,7 +23,7 @@ function ApplyForm({ job, onClose }) {
 
     try {
         const response = await fetch(
-            "http://localhost:3000/api/applications",
+            "https://hireflow-ats-backend.onrender.com/api/applications",
             {
                 method: "POST",
                 body: formData

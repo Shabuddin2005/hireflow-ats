@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import "../App.css";
 import ApplyForm from "../ApplyForm";
 
-const API_URL = "http://localhost:3000";
+const API_URL = "https://hireflow-ats-backend.onrender.com";
 
 function Jobs() {
   const [jobs, setJobs] = useState([]);

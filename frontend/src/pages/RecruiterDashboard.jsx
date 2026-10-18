@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import "../App.css";
 
-const API_URL = "http://localhost:3000";
+const API_URL = "https://hireflow-ats-backend.onrender.com";
 
 function RecruiterDashboard({ onLogout }) {
   const [applications, setApplications] = useState([]);
