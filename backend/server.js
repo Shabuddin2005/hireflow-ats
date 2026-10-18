@@ -248,40 +248,73 @@ app.post(
 
 
 
-app.get("/api/applications/:id/resume/download",verifyToken, (req, res) => {
-  db.query(
-    "SELECT resume_path FROM applications WHERE id = ?",
-    [req.params.id],
-    (error, rows) => {
-      if (error) {
-        console.error("Resume download error:", error);
-        return res.status(500).json({
-          message: "Database error"
-        });
-      }
+app.get("/api/applications/:id/resume/download", verifyToken, (req, res) => {
+    db.query(
+        "SELECT resume_path FROM applications WHERE id = ?",
+        [req.params.id],
+        (error, rows) => {
+            if (error) {
+                console.error("Resume download database error:", error);
 
-      if (rows.length === 0 || !rows[0].resume_path) {
-        return res.status(404).json({
-          message: "Resume not found"
-        });
-      }
+                return res.status(500).json({
+                    message: "Database error"
+                });
+            }
 
-      const filePath = path.join(
-        __dirname,
-        "uploads",
-        path.basename(rows[0].resume_path)
-      );
+            // Check whether the application exists
+            if (rows.length === 0) {
+                console.log("Application not found:", req.params.id);
 
-      res.download(filePath, "candidate-resume.pdf", (error) => {
-        if (error && !res.headersSent) {
-          console.error("File download error:", error);
-          res.status(404).json({
-            message: "Resume file could not be downloaded"
-          });
+                return res.status(404).json({
+                    message: "Application not found"
+                });
+            }
+
+            // Check whether a resume path is stored
+            if (!rows[0].resume_path) {
+                console.log("Resume path is missing for application:", req.params.id);
+
+                return res.status(404).json({
+                    message: "Resume path not found in database"
+                });
+            }
+
+            // Build the expected PDF file path
+            const filePath = path.join(
+                __dirname,
+                "uploads",
+                path.basename(rows[0].resume_path)
+            );
+
+            // Debug logs
+            console.log("Application ID:", req.params.id);
+            console.log("Resume path in database:", rows[0].resume_path);
+            console.log("Expected file path:", filePath);
+            console.log("File exists:", fs.existsSync(filePath));
+
+            // Check whether the PDF exists on the server
+            if (!fs.existsSync(filePath)) {
+                console.error("Resume file missing on server:", filePath);
+
+                return res.status(404).json({
+                    message: "Resume file not found on server"
+                });
+            }
+
+            // Download the PDF
+            res.download(filePath, "candidate-resume.pdf", (downloadError) => {
+                if (downloadError) {
+                    console.error("File download error:", downloadError);
+
+                    if (!res.headersSent) {
+                        return res.status(500).json({
+                            message: "Failed to download resume"
+                        });
+                    }
+                }
+            });
         }
-      });
-    }
-  );
+    );
 });
 
 
