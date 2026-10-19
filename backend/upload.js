@@ -1,22 +1,30 @@
+
 const multer = require("multer");
-const path = require("path");
-const crypto = require("crypto");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("cloudinary").v2;
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, "uploads"));
-    },
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
-    filename: (req, file, cb) => {
-        const uniqueName = crypto.randomUUID() + ".pdf";
-        cb(null, uniqueName);
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: "hireflow-resumes",
+        resource_type: "raw",
+        allowed_formats: ["pdf"],
+        public_id: (req, file) => {
+            return `${Date.now()}-${file.originalname.replace(/\.pdf$/i, "")}`;
+        }
     }
 });
 
 const fileFilter = (req, file, cb) => {
-    const extension = path.extname(file.originalname).toLowerCase();
+    const extension = file.originalname.split(".").pop().toLowerCase();
 
-    if (extension === ".pdf" && file.mimetype === "application/pdf") {
+    if (extension === "pdf" && file.mimetype === "application/pdf") {
         cb(null, true);
     } else {
         cb(new Error("Only PDF resumes are allowed"));
